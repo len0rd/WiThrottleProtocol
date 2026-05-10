@@ -8,7 +8,7 @@
 
 static const char* TAG = "SocketStream";
 
-SocketStream::SocketStream() : _sockfd(-1), _peeked(-1) {}
+SocketStream::SocketStream() : _sockfd(-1), _peeked(-1), _txlen(0) {}
 
 SocketStream::~SocketStream()
 {
@@ -71,6 +71,7 @@ void SocketStream::disconnect()
         _sockfd = -1;
     }
     _peeked = -1;
+    _txlen  = 0; // discard any unsent buffered bytes
 }
 
 bool SocketStream::connected() const
@@ -149,13 +150,38 @@ int SocketStream::peek()
 
 size_t SocketStream::write(uint8_t c)
 {
-    return write(&c, 1);
+    if (_sockfd < 0)
+        return 0;
+    if (_txlen < TX_BUF_SIZE)
+        _txbuf[_txlen++] = c;
+    if (_txlen == TX_BUF_SIZE)
+        flush();
+    return 1;
 }
 
 size_t SocketStream::write(const uint8_t* buf, size_t len)
 {
     if (_sockfd < 0 || len == 0)
         return 0;
-    int n = send(_sockfd, buf, len, 0);
-    return (n > 0) ? (size_t) n : 0;
+    size_t written = 0;
+    while (written < len)
+    {
+        size_t space = TX_BUF_SIZE - _txlen;
+        size_t chunk = (len - written < space) ? (len - written) : space;
+        memcpy(_txbuf + _txlen, buf + written, chunk);
+        _txlen += chunk;
+        written += chunk;
+        if (_txlen == TX_BUF_SIZE)
+            flush();
+    }
+    return written;
+}
+
+void SocketStream::flush()
+{
+    if (_sockfd >= 0 && _txlen > 0)
+    {
+        send(_sockfd, _txbuf, _txlen, 0);
+        _txlen = 0;
+    }
 }

@@ -27,9 +27,20 @@ public:
     int    peek() override;
     size_t write(uint8_t c) override;
     size_t write(const uint8_t* buf, size_t len) override;
-    void   flush() override {}
+
+    /**
+     * Flush the TX buffer: send all buffered bytes in a single send() call.
+     * Called automatically when a newline is buffered or the buffer is full.
+     */
+    void flush() override;
 
 private:
     int _sockfd;
     int _peeked; // -1 = no peeked byte
+
+    // TX coalescing buffer — accumulates small writes and flushes on '\n'
+    // or when full, to avoid one send() per character/fragment.
+    static constexpr size_t TX_BUF_SIZE = 512;
+    uint8_t                 _txbuf[TX_BUF_SIZE];
+    size_t                  _txlen;
 };

@@ -202,6 +202,7 @@ void WiThrottleProtocol::sendCommand(String cmd) {
         if (server) {
             stream->println("");
         }
+        stream->flush();
         console->print("WiT:: ==> "); console->println(cmd);
     }
 }
@@ -249,6 +250,7 @@ void WiThrottleProtocol::sendDelayedCommand(String cmd) {
                 if (server) {
                     stream->println("");
                 }
+                stream->flush();
                 if (logLevel>0) {
                     console->print("WiT:: ==> "); console->print(thisCmd);
                     console->print(" ("); console->print(millis()); console->println(")");
