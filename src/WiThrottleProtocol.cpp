@@ -1599,7 +1599,7 @@ void WiThrottleProtocol::setFunction(char multiThrottle, String address, int fun
     else {
         cmd += "0";
     }
-    cmd += funcNum;
+    cmd += std::to_string(funcNum);
     sendDelayedCommand(cmd);
 
     if (logLevel>1) console->println("WiT:: setFunction(): end"); 
